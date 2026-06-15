@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SSP Assignment Board</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: #0d1117; color: #e6edf3; min-height: 100vh; }
+
+  .nav { display: flex; align-items: center; gap: 0; background: #161b22; border-bottom: 1px solid #21262d; padding: 0 1.5rem; }
+  .nav-logo { height: 36px; filter: brightness(0) invert(1); opacity: 0.85; margin-right: 2rem; padding: 8px 0; }
+  .tab { padding: 12px 20px; font-size: 14px; cursor: pointer; border: none; background: none; color: #8b949e; border-bottom: 2px solid transparent; transition: color .15s, border-color .15s; }
+  .tab.active { color: #e6edf3; border-bottom-color: #1f6feb; font-weight: 500; }
+  .tab:hover:not(.active) { color: #c9d1d9; }
+
+  #panel-admin { display: block; padding: 1.5rem; max-width: 860px; margin: 0 auto; }
+  #panel-tv    { display: none; padding: 1.5rem; }
+
+  .card { background: #161b22; border: 1px solid #21262d; border-radius: 10px; padding: 1.25rem; margin-bottom: 1.25rem; }
+  .card h2 { font-size: 14px; font-weight: 600; color: #8b949e; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 1rem; }
+  .row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  input, select { flex: 1; padding: 7px 12px; font-size: 14px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #e6edf3; outline: none; transition: border-color .15s; }
+  input:focus, select:focus { border-color: #1f6feb; }
+  input.short { flex: 0 0 100px; }
+  button { padding: 7px 16px; font-size: 13px; border: 1px solid #30363d; border-radius: 6px; cursor: pointer; background: #21262d; color: #e6edf3; transition: background .15s; }
+  button:hover { background: #30363d; }
+  button.primary { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+  button.primary:hover { background: #388bfd; }
+  button.danger { background: none; border: none; color: #f85149; font-size: 16px; padding: 4px 8px; }
+  .job-row { display: flex; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid #21262d; }
+  .job-row:last-child { border-bottom: none; }
+  .job-id { font-family: monospace; font-size: 12px; color: #8b949e; min-width: 80px; }
+  .job-name { flex: 1; font-size: 14px; }
+  .emp-row { display: flex; gap: 8px; align-items: center; padding: 5px 0; border-bottom: 1px solid #21262d; }
+  .emp-row:last-child { border-bottom: none; }
+  .emp-name { flex: 1; font-size: 14px; }
+  .assign-block { background: #0d1117; border: 1px solid #21262d; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; }
+  .assign-emp { font-weight: 600; font-size: 15px; margin-bottom: 8px; color: #e6edf3; }
+  .assign-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .assign-tag { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; background: #1d3a2c; color: #5DCAA5; border: 1px solid #0F6E56; }
+  .assign-tag button { background: none; border: none; padding: 0; font-size: 14px; line-height: 1; color: #5DCAA5; cursor: pointer; }
+  .tag-id { font-family: monospace; opacity: .7; }
+
+  /* TV */
+  .tv-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #21262d; }
+  .tv-logo { height: 44px; filter: brightness(0) invert(1); opacity: 0.88; }
+  .tv-meta { text-align: right; }
+  .tv-title { font-size: 16px; font-weight: 600; color: #c9d1d9; letter-spacing: 1px; }
+  .tv-time { font-size: 13px; color: #6e7681; margin-top: 3px; }
+  .tv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+  .tv-card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 16px; }
+  .tv-card-name { font-size: 15px; font-weight: 600; color: #e6edf3; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .tv-card-name svg { opacity: .4; flex-shrink: 0; }
+  .tv-badge-wrap { margin-bottom: 6px; }
+  .tv-badge-id { font-family: monospace; font-size: 11px; color: #6e7681; margin-bottom: 2px; }
+  .tv-badge { display: inline-block; padding: 4px 11px; border-radius: 999px; font-size: 12px; font-weight: 500; }
+  .tv-empty { text-align: center; color: #6e7681; padding: 4rem 0; font-size: 15px; }
+
+  .hint { font-size: 12px; color: #6e7681; background: #161b22; border: 1px solid #21262d; border-radius: 6px; padding: 8px 12px; margin-bottom: 1rem; }
+  .excel-status { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 10px 14px; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #21262d; background: #161b22; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #6e7681; flex-shrink: 0; }
+  .dot.green { background: #3fb950; }
+  .dot.red { background: #f85149; }
+  .dot.pulse { animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  .mode-toggle { display: flex; gap: 8px; margin-bottom: 1rem; align-items: center; }
+  .mode-toggle span { font-size: 13px; color: #8b949e; }
+  .toggle-btn { padding: 5px 12px; font-size: 12px; border-radius: 999px; }
+  .toggle-btn.active-mode { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <img class="nav-logo" src="SSP-LOGO-A4.jpg" alt="SSP" onerror="this.style.display='none'" />
+  <button class="tab active" onclick="switchTab('admin')">&#9881; Admin</button>
+  <button class="tab" onclick="switchTab('tv')">&#128250; TV Display</button>
+</nav>
+
+<div id="panel-admin">
+
+  <!-- MODE TOGGLE -->
+  <div class="mode-toggle">
+    <span>Data source:</span>
+    <button class="toggle-btn active-mode" id="btn-manual" onclick="setMode('manual')">Manual Entry</button>
+    <button class="toggle-btn" id="btn-excel" onclick="setMode('excel')">Excel (SharePoint)</button>
+  </div>
+
+  <!-- EXCEL STATUS (shown in excel mode) -->
+  <div id="excel-panel" style="display:none;">
+    <div class="excel-status">
+      <div class="dot" id="sync-dot"></div>
+      <span id="sync-status">Not synced yet</span>
+      <button class="primary" style="margin-left:auto;" onclick="fetchExcel()">&#8635; Sync Now</button>
+    </div>
+    <div class="hint">&#128196; Edit your Excel file on SharePoint or OneDrive, then click <strong>Sync Now</strong>. The TV display syncs automatically every 60 seconds.<br><br>
+    Make sure your Excel has 3 columns: <strong>Employee</strong> &nbsp;|&nbsp; <strong>Job ID</strong> &nbsp;|&nbsp; <strong>Job Name</strong></div>
+  </div>
+
+  <!-- MANUAL PANELS -->
+  <div id="manual-panel">
+    <div class="card">
+      <h2>Employees</h2>
+      <div id="emp-list"></div>
+      <div class="row" style="margin-top:10px;">
+        <input id="new-emp" placeholder="Employee name..." />
+        <button class="primary" onclick="addEmployee()">+ Add</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Jobs / Tasks</h2>
+      <div id="job-list"></div>
+      <div class="row" style="margin-top:10px;">
+        <input id="new-job-id" class="short" placeholder="Job ID..." />
+        <input id="new-job-name" placeholder="Job or task name..." />
+        <button class="primary" onclick="addJob()">+ Add</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Assignments</h2>
+      <div id="assign-list"></div>
+      <div class="row" style="margin-top:10px;">
+        <select id="pick-emp"><option value="">Select employee...</option></select>
+        <select id="pick-job"><option value="">Select job...</option></select>
+        <button class="primary" onclick="addAssignment()">Assign</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="panel-tv">
+  <div class="hint">&#128161; Tip: Press <strong>F11</strong> to fill the TV screen. This page auto-refreshes every 60 seconds.</div>
+  <div class="tv-header">
+    <img class="tv-logo" src="SSP-LOGO-A4.jpg" alt="SSP" onerror="this.style.display='none'" />
+    <div class="tv-meta">
+      <div class="tv-title">ASSIGNMENT BOARD</div>
+      <div class="tv-time" id="tv-time"></div>
+    </div>
+  </div>
+  <div class="tv-grid" id="tv-grid"></div>
+  <div class="tv-empty" id="tv-empty" style="display:none;">No assignments yet.</div>
+</div>
+
+<script>
+const COLORS = [
+  {bg:'#1d3a2c', text:'#5DCAA5', border:'#0F6E56'},
+  {bg:'#2c1e0f', text:'#EF9F27', border:'#854F0B'},
+  {bg:'#2b1a18', text:'#F0997B', border:'#993C1D'},
+  {bg:'#1a2a3e', text:'#85B7EB', border:'#185FA5'},
+  {bg:'#211f3e', text:'#AFA9EC', border:'#534AB7'},
+  {bg:'#2c1e28', text:'#ED93B1', border:'#993556'},
+];
+
+// SharePoint file ID extracted from URL
+const SP_FILE_ID = 'D7B46C4C-1D60-4AC0-886D-77869BC526FD';
+const SP_USER    = 'nlewis_sspmfg_com';
+const SP_HOST    = 'selflockscrewproducts-my.sharepoint.com';
+const EXCEL_CSV_URL = `https://${SP_HOST}/personal/${SP_USER}/_layouts/15/download.aspx?UniqueId=${SP_FILE_ID}&Translate=false&tempauth=&download=1`;
+
+// Use the public share link for CSV export via Office Online
+// We'll use the share link with output=csv trick
+const SHARE_URL = 'https://selflockscrewproducts-my.sharepoint.com/:x:/g/personal/nlewis_sspmfg_com/IQBMbLTXYB3ASohtd4abxSb9ARvntdZ1rure5Yk7n9SWXic';
+const CSV_URL = SHARE_URL + '&download=1';
+
+let mode = localStorage.getItem('ssp_mode') || 'manual';
+
+let state = JSON.parse(localStorage.getItem('ssp_board') || 'null') || {
+  employees: ['Alice Johnson', 'Ben Torres', 'Carla Smith'],
+  jobs: [
+    {id:'JOB-001', name:'Harness Assembly'},
+    {id:'JOB-002', name:'Wire Crimping'},
+    {id:'JOB-003', name:'Quality Check'},
+    {id:'JOB-004', name:'Connector Install'},
+  ],
+  assignments: [
+    {emp:'Alice Johnson', jobIdx:0},
+    {emp:'Alice Johnson', jobIdx:2},
+    {emp:'Ben Torres', jobIdx:1},
+    {emp:'Carla Smith', jobIdx:3},
+  ]
+};
+
+// Excel data stored separately
+let excelAssignments = JSON.parse(localStorage.getItem('ssp_excel') || '[]');
+
+function save() { localStorage.setItem('ssp_board', JSON.stringify(state)); }
+function saveExcel(data) { localStorage.setItem('ssp_excel', JSON.stringify(data)); excelAssignments = data; }
+
+// ---- MODE ----
+function setMode(m) {
+  mode = m;
+  localStorage.setItem('ssp_mode', m);
+  document.getElementById('btn-manual').classList.toggle('active-mode', m==='manual');
+  document.getElementById('btn-excel').classList.toggle('active-mode', m==='excel');
+  document.getElementById('manual-panel').style.display = m==='manual' ? 'block' : 'none';
+  document.getElementById('excel-panel').style.display  = m==='excel'  ? 'block' : 'none';
+  renderTV();
+}
+
+// ---- TABS ----
+function switchTab(t) {
+  document.getElementById('panel-admin').style.display = t==='admin' ? 'block' : 'none';
+  document.getElementById('panel-tv').style.display   = t==='tv'    ? 'block' : 'none';
+  document.querySelectorAll('.tab').forEach((el,i) =>
+    el.classList.toggle('active', (t==='admin'&&i===0)||(t==='tv'&&i===1)));
+  if (t==='tv') renderTV();
+}
+
+// ---- FETCH EXCEL from SharePoint ----
+async function fetchExcel() {
+  const dot = document.getElementById('sync-dot');
+  const status = document.getElementById('sync-status');
+  dot.className = 'dot pulse';
+  status.textContent = 'Syncing...';
+
+  try {
+    // Use the share link with download parameter to get the file
+    // Then parse it as CSV using SheetJS via CDN
+    const response = await fetch(CSV_URL, { mode: 'no-cors' });
+    // no-cors won't work for reading — use the JSONP/odata approach instead
+    throw new Error('cors');
+  } catch(e) {
+    // Fallback: use SharePoint OData REST API
+    // Since this is a personal SharePoint, try the _api/web approach
+    try {
+      const apiUrl = `https://${SP_HOST}/personal/${SP_USER}/_api/web/GetFileById('${SP_FILE_ID}')/OpenBinaryStream`;
+      const res = await fetch(apiUrl, { credentials: 'include' });
+      if (!res.ok) throw new Error('api');
+      const blob = await res.blob();
+      parseExcelBlob(blob);
+    } catch(e2) {
+      // Last fallback: tell user to download and re-upload
+      dot.className = 'dot red';
+      status.innerHTML = 'Could not auto-sync. <a href="' + SHARE_URL + '" target="_blank" style="color:#1f6feb;">Open Excel</a>, download as CSV, then <label for="csv-upload" style="color:#1f6feb;cursor:pointer;">upload it here</label>.';
+      showCsvUpload();
+    }
+  }
+}
+
+function showCsvUpload() {
+  if (document.getElementById('csv-upload')) return;
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.id = 'csv-upload'; inp.accept = '.csv,.xlsx';
+  inp.style.display = 'none';
+  inp.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      if (file.name.endsWith('.csv')) {
+        parseCSV(ev.target.result);
+      } else {
+        parseExcelArrayBuffer(ev.target.result);
+      }
+    };
+    if (file.name.endsWith('.csv')) reader.readAsText(file);
+    else reader.readAsArrayBuffer(file);
+  };
+  document.getElementById('excel-panel').appendChild(inp);
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n').map(l => l.split(',').map(c => c.replace(/^"|"$/g,'').trim()));
+  // Skip header row (row with "Employee" etc) and instruction rows
+  const data = [];
+  let headerFound = false;
+  for (const row of lines) {
+    if (!headerFound) {
+      if (row[0] && row[0].toLowerCase().includes('employee')) { headerFound = true; }
+      continue;
+    }
+    if (row[0] && row[1] && row[2] && !row[0].toLowerCase().includes('employee')) {
+      data.push({ emp: row[0].trim(), id: row[1].trim(), name: row[2].trim() });
+    }
+  }
+  if (data.length) {
+    saveExcel(data);
+    setSyncSuccess(data.length);
+    renderTV();
+  } else {
+    setSyncError('No data rows found. Check your Excel format.');
+  }
+}
+
+async function parseExcelBlob(blob) {
+  const ab = await blob.arrayBuffer();
+  parseExcelArrayBuffer(ab);
+}
+
+function parseExcelArrayBuffer(ab) {
+  // Load SheetJS dynamically
+  if (window.XLSX) {
+    doParseXLSX(ab);
+  } else {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = () => doParseXLSX(ab);
+    document.head.appendChild(s);
+  }
+}
+
+function doParseXLSX(ab) {
+  const wb = XLSX.read(ab, {type:'array'});
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1});
+  const data = [];
+  let headerFound = false;
+  for (const row of rows) {
+    if (!headerFound) {
+      if (row[0] && String(row[0]).toLowerCase().includes('employee')) headerFound = true;
+      continue;
+    }
+    if (row[0] && row[1] && row[2]) {
+      data.push({ emp: String(row[0]).trim(), id: String(row[1]).trim(), name: String(row[2]).trim() });
+    }
+  }
+  if (data.length) {
+    saveExcel(data);
+    setSyncSuccess(data.length);
+    renderTV();
+  } else {
+    setSyncError('No data found. Check column headers: Employee, Job ID, Job Name');
+  }
+}
+
+function setSyncSuccess(count) {
+  const dot = document.getElementById('sync-dot');
+  const status = document.getElementById('sync-status');
+  if (!dot) return;
+  dot.className = 'dot green';
+  status.textContent = `Synced — ${count} assignment${count!==1?'s':''} loaded. Last sync: ${new Date().toLocaleTimeString()}`;
+}
+
+function setSyncError(msg) {
+  const dot = document.getElementById('sync-dot');
+  const status = document.getElementById('sync-status');
+  if (!dot) return;
+  dot.className = 'dot red';
+  status.textContent = msg;
+}
+
+// ---- GET CURRENT ASSIGNMENTS ----
+function getDisplayData() {
+  if (mode === 'excel') {
+    // Group excel rows by employee
+    const byEmp = {};
+    excelAssignments.forEach(row => {
+      if (!byEmp[row.emp]) byEmp[row.emp] = [];
+      byEmp[row.emp].push({id: row.id, name: row.name});
+    });
+    return byEmp;
+  } else {
+    const byEmp = {};
+    state.assignments.forEach(a => {
+      const j = state.jobs[a.jobIdx];
+      if (!j) return;
+      if (!byEmp[a.emp]) byEmp[a.emp] = [];
+      byEmp[a.emp].push({id: j.id, name: j.name});
+    });
+    return byEmp;
+  }
+}
+
+// ---- RENDER TV ----
+function renderTV() {
+  const grid = document.getElementById('tv-grid');
+  const empty = document.getElementById('tv-empty');
+  const byEmp = getDisplayData();
+  if (!Object.keys(byEmp).length) { grid.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display = 'none';
+  grid.innerHTML = Object.entries(byEmp).map(([emp, jobs]) =>
+    '<div class="tv-card">'
+    +'<div class="tv-card-name">'
+    +'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>'
+    + emp +'</div>'
+    + jobs.map((j,ci) => {
+        const c = COLORS[ci % COLORS.length];
+        return '<div class="tv-badge-wrap">'
+          +'<div class="tv-badge-id">'+j.id+'</div>'
+          +'<div class="tv-badge" style="background:'+c.bg+';color:'+c.text+';border:1px solid '+c.border+'">'+j.name+'</div>'
+          +'</div>';
+      }).join('')
+    +'</div>'
+  ).join('');
+}
+
+// ---- RENDER EMPLOYEES ----
+function renderEmployees() {
+  const el = document.getElementById('emp-list');
+  el.innerHTML = state.employees.length ? state.employees.map((e,i) =>
+    '<div class="emp-row"><span class="emp-name">'+e+'</span>'
+    +'<button class="danger" onclick="removeEmployee('+i+')">&#128465;</button></div>'
+  ).join('') : '<p style="color:#6e7681;font-size:13px;padding:4px 0;">No employees yet.</p>';
+  const sel = document.getElementById('pick-emp');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Select employee...</option>'
+    + state.employees.map(e => '<option value="'+e+'">'+e+'</option>').join('');
+  sel.value = cur;
+}
+
+// ---- RENDER JOBS ----
+function renderJobs() {
+  const el = document.getElementById('job-list');
+  el.innerHTML = state.jobs.length ? state.jobs.map((j,i) =>
+    '<div class="job-row"><span class="job-id">'+j.id+'</span>'
+    +'<span class="job-name">'+j.name+'</span>'
+    +'<button class="danger" onclick="removeJob('+i+')">&#128465;</button></div>'
+  ).join('') : '<p style="color:#6e7681;font-size:13px;padding:4px 0;">No jobs yet.</p>';
+  const sel = document.getElementById('pick-job');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Select job...</option>'
+    + state.jobs.map((j,i) => '<option value="'+i+'">['+j.id+'] '+j.name+'</option>').join('');
+  sel.value = cur;
+}
+
+// ---- RENDER ASSIGNMENTS ----
+function renderAssignments() {
+  const el = document.getElementById('assign-list');
+  if (!state.assignments.length) {
+    el.innerHTML = '<p style="color:#6e7681;font-size:13px;padding:4px 0;">No assignments yet.</p>';
+    return;
+  }
+  const byEmp = {};
+  state.assignments.forEach((a,i) => { if (!byEmp[a.emp]) byEmp[a.emp]=[]; byEmp[a.emp].push({...a, idx:i}); });
+  el.innerHTML = Object.entries(byEmp).map(([emp,jobs]) =>
+    '<div class="assign-block">'
+    +'<div class="assign-emp">'+emp+'</div>'
+    +'<div class="assign-tags">'
+    + jobs.map(({jobIdx, idx}) => {
+        const j = state.jobs[jobIdx]; if (!j) return '';
+        return '<span class="assign-tag">'
+          +'<span class="tag-id">'+j.id+'</span> '+j.name
+          +' <button onclick="removeAssignment('+idx+')">&#x2715;</button>'
+          +'</span>';
+      }).join('')
+    +'</div></div>'
+  ).join('');
+}
+
+// ---- CLOCK ----
+function updateTime() {
+  const el = document.getElementById('tv-time');
+  if (el) el.textContent = new Date().toLocaleString('en-US',{weekday:'long',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+updateTime();
+setInterval(updateTime, 30000);
+
+// ---- AUTO REFRESH ----
+setInterval(() => {
+  if (mode === 'excel') fetchExcel();
+  if (document.getElementById('panel-tv').style.display !== 'none') renderTV();
+}, 60000);
+
+// ---- ACTIONS ----
+function addEmployee() {
+  const inp = document.getElementById('new-emp');
+  const v = inp.value.trim();
+  if (!v || state.employees.includes(v)) return;
+  state.employees.push(v); inp.value='';
+  save(); renderEmployees(); renderAssignments();
+}
+function removeEmployee(i) {
+  const name = state.employees[i];
+  state.employees.splice(i, 1);
+  state.assignments = state.assignments.filter(a => a.emp !== name);
+  save(); renderEmployees(); renderAssignments();
+}
+function addJob() {
+  const idEl = document.getElementById('new-job-id');
+  const nmEl = document.getElementById('new-job-name');
+  const id = idEl.value.trim().toUpperCase();
+  const name = nmEl.value.trim();
+  if (!id || !name) return;
+  state.jobs.push({id, name}); idEl.value=''; nmEl.value='';
+  save(); renderJobs(); renderAssignments();
+}
+function removeJob(i) {
+  state.jobs.splice(i, 1);
+  state.assignments = state.assignments.filter(a => a.jobIdx !== i)
+    .map(a => ({...a, jobIdx: a.jobIdx > i ? a.jobIdx-1 : a.jobIdx}));
+  save(); renderJobs(); renderAssignments();
+}
+function addAssignment() {
+  const emp = document.getElementById('pick-emp').value;
+  const jobIdxStr = document.getElementById('pick-job').value;
+  if (!emp || jobIdxStr==='') return;
+  const jobIdx = parseInt(jobIdxStr);
+  if (state.assignments.find(a => a.emp===emp && a.jobIdx===jobIdx)) return;
+  state.assignments.push({emp, jobIdx});
+  save(); renderAssignments();
+}
+function removeAssignment(i) {
+  state.assignments.splice(i, 1);
+  save(); renderAssignments();
+}
+
+document.getElementById('new-emp').addEventListener('keydown', e => e.key==='Enter' && addEmployee());
+document.getElementById('new-job-id').addEventListener('keydown', e => e.key==='Enter' && document.getElementById('new-job-name').focus());
+document.getElementById('new-job-name').addEventListener('keydown', e => e.key==='Enter' && addJob());
+
+// ---- INIT ----
+setMode(mode);
+renderEmployees(); renderJobs(); renderAssignments();
+</script>
+</body>
+</html>
